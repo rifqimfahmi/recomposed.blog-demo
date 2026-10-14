@@ -1,9 +1,12 @@
 package blog.recomposed.demosrecomposed.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,14 +21,19 @@ fun MainScreen(
     onScreenSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        destinationScreens.forEach { screen ->
-            Button(onClick = { onScreenSelected(screen.route) }) {
+        items(destinationScreens) { screen ->
+            Button(
+                onClick = { onScreenSelected(screen.route) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(screen.title)
             }
         }

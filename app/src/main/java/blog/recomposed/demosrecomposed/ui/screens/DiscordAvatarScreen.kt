@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
@@ -18,18 +18,20 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import blog.recomposed.demosrecomposed.ui.theme.Gray400
-import blog.recomposed.demosrecomposed.ui.theme.Gray50
 import blog.recomposed.demosrecomposed.ui.theme.Gray500
 import blog.recomposed.demosrecomposed.ui.theme.Gray700
 import blog.recomposed.demosrecomposed.ui.theme.Green700
-import blog.recomposed.demosrecomposed.ui.theme.Red400
 import blog.recomposed.demosrecomposed.ui.theme.Red700
 import blog.recomposed.demosrecomposed.ui.theme.Yellow600
 import blog.recomposed.demosrecomposed.ui.theme.Zinc800
 import coil3.compose.AsyncImage
+
+private val StatusIndicatorOuterRadius = 24.dp
+private val StatusIndicatorInnerRadius = 16.dp
 
 sealed class Status(val color: Color) {
     data object Online: Status(color = Green700)
@@ -51,7 +53,7 @@ fun DiscordAvatarScreen() {
             contentAlignment = Alignment.Center
         ) {
             DiscordAvatar1(
-                status = Status.Offline
+                status = Status.Online
             )
         }
     }
@@ -70,9 +72,9 @@ fun DiscordAvatar1(
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.Offscreen
                 }
-                .drawWithContent {
-                    drawContent()
-
+                .drawWithCache {
+                    // Paths only depend on `size`, so drawWithCache builds them once per
+                    // size change instead of on every frame.
                     val fullRect = Path().apply {
                         addRect(Rect(
                             topLeft = Offset(0f, 0f),
@@ -80,58 +82,68 @@ fun DiscordAvatar1(
                         ))
                     }
 
+                    // The circle the square image gets cropped to.
                     val innerCircle = Path().apply {
                         addOval(Rect(
-                            center = center,
+                            center = Offset(size.width / 2f, size.height / 2f),
                             radius = size.minDimension / 2
                         ))
                     }
 
+                    // XOR of the full square and the inner circle leaves just the four
+                    // corners outside the circle, which get cleared below to round the image.
                     val cornerPath = Path.combine(
                         operation = PathOperation.Xor,
                         path1 = fullRect,
                         path2 = innerCircle
                     )
-                    drawPath(
-                        path = cornerPath,
-                        color = Red400,
-                        blendMode = BlendMode.Clear
-                    )
 
-                    val bigRadius = 24.dp
-                    val smallRadius = 16.dp
-
+                    // Bottom-right corner, where the status badge sits.
                     val indicatorCenterOffset = Offset(
-                        x = size.width - bigRadius.toPx(),
-                        y = size.height - bigRadius.toPx()
+                        x = size.width - StatusIndicatorOuterRadius.toPx(),
+                        y = size.height - StatusIndicatorOuterRadius.toPx()
                     )
-                    val biggerCircle = Path().apply {
+                    // Punches a hole in the avatar so the badge isn't drawn over the photo.
+                    val indicatorCutoutCircle = Path().apply {
                         addOval(Rect(
                             center = indicatorCenterOffset,
-                            radius = bigRadius.toPx()
+                            radius = StatusIndicatorOuterRadius.toPx()
                         ))
                     }
 
-                    drawPath(
-                        path = biggerCircle,
-                        color = Gray50,
-                        blendMode = BlendMode.Clear
-                    )
-
-                    val smallerCircle = Path().apply {
+                    // The visible status badge, drawn inside the cutout hole.
+                    val indicatorDotCircle = Path().apply {
                         addOval(Rect(
                             center = indicatorCenterOffset,
-                            radius = smallRadius.toPx()
+                            radius = StatusIndicatorInnerRadius.toPx()
                         ))
                     }
 
-                    drawPath(
-                        path = smallerCircle,
-                        color = status.color
-                    )
+                    onDrawWithContent {
+                        drawContent()
+
+                        // BlendMode.Clear erases pixels, so the color passed here is ignored.
+                        drawPath(
+                            path = cornerPath,
+                            color = Color.Transparent,
+                            blendMode = BlendMode.Clear
+                        )
+
+                        drawPath(
+                            path = indicatorCutoutCircle,
+                            color = Color.Transparent,
+                            blendMode = BlendMode.Clear
+                        )
+
+                        drawPath(
+                            path = indicatorDotCircle,
+                            color = status.color
+                        )
+                    }
                 },
             model = "https://i.postimg.cc/CxC3QMhy/didin-hasbullah-KD2Cre3V19I-unsplash-2.jpg",
             contentDescription = "User profile photo",
+            contentScale = ContentScale.Crop,
         )
     }
 }

@@ -184,7 +184,7 @@ fun DiscordAvatar2(
     val avatarAnimatable = remember { Animatable(0f) }
     LaunchedEffect(avatarSize) {
         if (avatarSize == Size.Unspecified) return@LaunchedEffect
-        delay(250.milliseconds)
+        delay(500.milliseconds)
         smallRadiusAnimatable.snapTo(0f)
         bigRadiusAnimatable.snapTo(0f)
         avatarAnimatable.snapTo(0f)
